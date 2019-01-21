@@ -36,6 +36,7 @@ public class TelemetryApp
     public static void main(String[] args)
     {
         //Will not work if no database is running
+        //Prints Nodes in Database
         printAllNodes();
 
 
