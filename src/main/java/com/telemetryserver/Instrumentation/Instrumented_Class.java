@@ -12,7 +12,7 @@ public class Instrumented_Class extends HttpServlet
 {
     private static Instrumented_Class _instance = null;
 
-    public static final Gauge metric_1 = Gauge.build().name("metric_1").help("metric_1").register();
+    public static final Gauge metric_1 = Gauge.build().name("metric_1").labelNames("Instrumented_Class").help("metric_1").register();
     //public static final Gauge metric_2 = Gauge.build().name("metric_2").help("metric_2").register();
 
     public static Instrumented_Class getInstance()

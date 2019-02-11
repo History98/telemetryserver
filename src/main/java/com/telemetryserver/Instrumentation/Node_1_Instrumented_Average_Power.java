@@ -12,9 +12,11 @@ public class Node_1_Instrumented_Average_Power extends HttpServlet
 {
     private static Node_1_Instrumented_Average_Power  _instance = null;
 
-
     public static final Gauge node_1_average_power = Gauge.build()
             .name("node_1_average_power").help("node_1_average_power").register();
+
+    public static final Gauge node_1_average_utilisation = Gauge.build()
+            .name("node_1_average_utilisation").help("node_1_average_utilisation").register();
 
     public void setNode_1_average_power(float val)
     {
@@ -34,5 +36,6 @@ public class Node_1_Instrumented_Average_Power extends HttpServlet
             throws ServletException, IOException
     {
         resp.getWriter().println("Hello from Node_1_Instrumented_Average_Power!!!" + node_1_average_power.get());
+        node_1_average_power.inc();
     }
 }

@@ -6,7 +6,6 @@ import com.telemetryserver.model.*;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
 import io.prometheus.client.exporter.MetricsServlet;
-import io.prometheus.client.hotspot.DefaultExports;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -18,21 +17,6 @@ import javax.servlet.http.HttpServletResponse;
 
 public class NodeMonitoring
 {
-    static class ExampleServlet extends HttpServlet
-    {
-        static final Counter requests = Counter.build()
-                .name("hello_worlds_total_example")
-                .help("Number of hello worlds served.").register();
-
-        @Override
-        protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)
-                throws ServletException, IOException {
-            resp.getWriter().println("Hello World! example node monitor");
-            // Increment the number of requests.
-            requests.inc();
-        }
-    }
-
 
     public static void updateNodeInstrumentation(List<Node> currentNodes)
      {
@@ -59,19 +43,8 @@ public class NodeMonitoring
      }
 
 
-     public static void startPrometheusServer(CollectorRegistry collectorRegistry, int port)
+     public static void startPrometheusServer(int port)
      {
-
-         Timer myPeriodicTimer = new Timer();
-         TimerTask myTimerHandler = new TimerTask()
-         {
-             @Override
-             public void run()
-             {
-                 System.out.print(1);
-             }
-         };
-         myPeriodicTimer.scheduleAtFixedRate(myTimerHandler, 0, 1000);
 
          try
          {
@@ -89,7 +62,7 @@ public class NodeMonitoring
              // Expose Promtheus metrics.
              //context.addServlet(new ServletHolder(new CustomMetricsServlet(collectorRegistry)), "/metrics");
 
-             context.addServlet(new ServletHolder(new MetricsServlet(collectorRegistry)), "/metrics");
+             context.addServlet(new ServletHolder(new MetricsServlet()), "/metrics");
              // Add metrics about CPU, JVM memory etc.
              //DefaultExports.initialize();
 
