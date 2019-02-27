@@ -9,6 +9,7 @@ package com.odl.rest.test;
 
 import com.google.gson.*;
 import com.odl.rest.XmlFormatter;
+import com.telemetryserver.dao.ODLRESTHelper;
 import org.junit.Assert;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -298,6 +299,36 @@ public class ODLRestTest
 
     }
 
+    @Test
+    public void ODLRESTHelper_getNodeNumberFromMetricName()
+    {
+        String test_String = "Node_23_Link_1_dummy_metric";
+        int extractedNode = ODLRESTHelper.getNodeNumberFromMetricName(test_String);
+
+        Assert.assertEquals(extractedNode, 23);
+
+    }
+
+
+    @Test
+    public void ODLRESTHelper_getLinkNumberFromLinkName()
+    {
+        String test_String = "Node_23_Link_1_dummy_metric";
+        int extractedLink = ODLRESTHelper.getLinkNumberFromLinkName(test_String);
+
+        Assert.assertEquals(extractedLink, 1);
+
+    }
+
+    @Test
+    public void ODLRESTHelper_getMetricType()
+    {
+        String test_String = "Node_23_Link_1_dummy_metric";
+        String extractedMetric = ODLRESTHelper.getMetricType(test_String);
+
+        Assert.assertEquals(extractedMetric , "dummy_metric");
+
+    }
 
     private static String readAll(Reader rd) throws IOException {
         StringBuilder sb = new StringBuilder();

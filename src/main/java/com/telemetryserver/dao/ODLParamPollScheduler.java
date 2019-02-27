@@ -15,7 +15,10 @@ public class ODLParamPollScheduler extends TimerTask
         System.out.print("\nRunning ODLParamPollScheduler\n");
 
         //Only for first 3 nodes for now
-        ODLNodeInstrumetation.updateODLPacketMetrics();
+        //ODLNodeInstrumetation.updateODLPacketMetrics();
+
+        //only for the first 20 nodes
+        ODLNodeInstrumetation.updateODLMetricsAll();
     }
 
     @Override

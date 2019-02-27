@@ -37,7 +37,7 @@ public class TelemetryApp
         //NodeMonitoring.startPrometheusServer(collectorRegistry, 2018);
 
         ODLNodeInstrumetation.get_instance();
-        instrumentODLNodes(100);
+        instrumentODLNodes(1000);
         startTestServer(2018);
     }
 
