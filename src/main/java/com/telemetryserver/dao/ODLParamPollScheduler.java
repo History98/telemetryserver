@@ -19,6 +19,9 @@ public class ODLParamPollScheduler extends TimerTask
 
         //only for the first 20 nodes
         ODLNodeInstrumetation.updateODLMetricsAll();
+
+        //Update Neccesary entities
+        ODLRESTHelper.updatePrevTXBytes();
     }
 
     @Override

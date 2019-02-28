@@ -4,10 +4,7 @@ import com.google.gson.*;
 import com.telemetryserver.Instrumentation.ODLNodeInstrumetation;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -71,41 +68,70 @@ public class ODLRESTHelper
         }
         catch   (Exception ex)
         {
-            ex.printStackTrace();
+            //ex.printStackTrace();
         }
 
-        return -1;
+        return 0;
 
     }
 
     private static int ODLRESTNodeLinkByteParamExtraction(int nodeNumber, int linkNumber, String param)
     {
-            JSONObject resp = ODLRESTHelper.ODLPortStatisticsJSON(nodeNumber, linkNumber);
-            JSONObject json_bytes = (JSONObject) resp.get("bytes");
-            return json_bytes.getInt(param);
+           try {
+               JSONObject resp = ODLRESTHelper.ODLPortStatisticsJSON(nodeNumber, linkNumber);
+               JSONObject json_bytes = (JSONObject) resp.get("bytes");
+               int result = json_bytes.getInt(param);
+               return result;
+           } catch (Exception ex)
+           {
+               return 0;
+           }
     }
 
     private static int ODLRESTNodeLinkParamExtraction(int nodeNumber, int linkNumber, String param)
     {
-        JSONObject resp = ODLRESTHelper.ODLPortStatisticsJSON(nodeNumber, linkNumber);
-        return resp.getInt(param);
+        try
+        {
+            JSONObject resp = ODLRESTHelper.ODLPortStatisticsJSON(nodeNumber, linkNumber);
+            int result = resp.getInt(param);
+            return result;
+
+        }catch (Exception ex)
+        {
+            return 0;
+        }
+
     }
 
     private static int ODLRESTNodeLinkInstantaneousRateTXParamExtraction(int nodeNumber, int linkNumber, int prevTXBytes)
     {
-        int currTXBytes = ODLRESTNodeLinkByteParamExtraction(nodeNumber, linkNumber, "transmitted");
-
-        return (currTXBytes - prevTXBytes);
+        try {
+            int currTXBytes = ODLRESTNodeLinkByteParamExtraction(nodeNumber, linkNumber, "transmitted");
+            int result = (currTXBytes - prevTXBytes);
+            return result;
+        }
+        catch(Exception ex)
+        {
+            return 0;
+        }
 
     }
 
     private static int ODLRESTNodeLinkInstantaneousRateTXRatioParamExtraction(int nodeNumber, int linkNumber, int prevTXBytes, int max_bit_bandwidth)
     {
-        int bytes_per_second = ODLRESTNodeLinkInstantaneousRateTXParamExtraction(nodeNumber, linkNumber, prevTXBytes);
-        int bits_per_second = bytes_per_second * 8;
+        try
+        {
+            int bytes_per_second = ODLRESTNodeLinkInstantaneousRateTXParamExtraction(nodeNumber, linkNumber, prevTXBytes);
+            int bits_per_second = bytes_per_second * 8;
 
-        //Return percentage between (0 and 100)
-        return 100 * (bits_per_second / max_bit_bandwidth);
+            //Return percentage between (0 and 100)
+            int result = 100 * (bits_per_second / max_bit_bandwidth);
+            return result;
+        }
+        catch(Exception ex)
+        {
+            return 0;
+        }
     }
 
     private static JSONObject ODLPortStatisticsJSON(int nodeNumber, int linkNumber)
@@ -138,9 +164,9 @@ public class ODLRESTHelper
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 
-            connection.disconnect();
-
             JSONObject json = new JSONObject(readAll(reader));
+
+            connection.disconnect();
 
             //System.out.println(json.toString());
 
@@ -154,9 +180,14 @@ public class ODLRESTHelper
             JSONObject connector =
                     (JSONObject) json.get("opendaylight-port-statistics:flow-capable-node-connector-statistics");
 
+
             return connector;
         }
         catch(Exception e)
+        {
+
+        }
+        finally
         {
 
         }
@@ -171,7 +202,7 @@ public class ODLRESTHelper
         int linkNumber = getLinkNumberFromLinkName(metric_name);
         metric_name = getMetricType(metric_name);
         int prevTXBytes;
-        int result = -1;
+        int result = 0;
 
         switch (metric_name)
         {
@@ -200,6 +231,7 @@ public class ODLRESTHelper
                 if(prevTXBytes == 0) return 0;
                 result = ODLRESTHelper.ODLRESTNodeLinkInstantaneousRateTXParamExtraction(nodeNumber, linkNumber,
                         prevTXBytes);
+
                 break;
 
             case "instantaneous_transmitted_rate_ratio":
@@ -210,13 +242,10 @@ public class ODLRESTHelper
                 break;
         }
 
-        //Update PrevTXBytes
-        ODLRESTHelper.updatePrevTXBytes();
-
         return result;
     }
 
-    private static void updatePrevTXBytes()
+    public static void updatePrevTXBytes()
     {
         for(int node = 1; node <= 20; node++)
             for(int link = 1; link <= 4; link++)
