@@ -35,10 +35,13 @@ public class TelemetryApp
 
         //NodeMonitoring.startPrometheusServer(CollectorRegistry.defaultRegistry, 2018);
         //NodeMonitoring.startPrometheusServer(collectorRegistry, 2018);
+        int samplingPeriodMS = 10000;
+        int port = 2018;
 
         ODLNodeInstrumetation.get_instance();
-        instrumentODLNodes(1000);
-        startTestServer(2018);
+        ODLNodeInstrumetation.samplingPeriodMS = samplingPeriodMS;
+        instrumentODLNodes(samplingPeriodMS);
+        startTestServer(port);
     }
 
 

@@ -1,7 +1,14 @@
+/*
+    Author: KMN
+    Description: Gets Data from MDSAL datastore via RESTConf.
+
+ */
+
 package com.telemetryserver.dao;
 
 import com.google.gson.*;
 import com.telemetryserver.Instrumentation.ODLNodeInstrumetation;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -13,102 +20,65 @@ import java.net.URL;
 
 public class ODLRESTHelper
 {
-    public static int ODLRESTNodeLinkPacketParamExtraction(int nodeNumber, int linkNumber, String param)
+    public static int ODLRESTNodeLinkPacketParamExtraction(JSONObject resp, String param)
     {
-        String nodeName = "openflow:" + nodeNumber;
-        String nodeLink = nodeName + ":" + linkNumber;
-
-        //Get current topology of currently running ODL instance and print it
-        //feature:install odl-restconf-all must be installed
         try
         {
-            String loginPassword = "admin" + ":" + "admin";
-            String encoded = new sun.misc.BASE64Encoder().encode (loginPassword.getBytes());
-            String responseType = "json";
-
-            //Get Topology from ODL REST interface
-            URL getUrl =
-                    new URL("http://localhost:8181/restconf/operational/opendaylight-inventory:nodes/node/" +
-                            nodeName +
-                            "/node-connector/" +
-                            nodeLink +
-                            "/opendaylight-port-statistics:flow-capable-node-connector-statistics");
-
-            HttpURLConnection connection = (HttpURLConnection) getUrl.openConnection();
-            connection.setDoOutput(true);
-            connection.setInstanceFollowRedirects(false);
-            connection.setRequestMethod("GET");
-            connection.setRequestProperty("Content-Type", "application/" + responseType);
-            connection.setRequestProperty("Authorization", "Basic " + encoded);
-
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-
-                JSONObject json = new JSONObject(readAll(reader));
-
-                //System.out.println(json.toString());
-
-                Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                JsonParser jp = new JsonParser();
-                JsonElement je = jp.parse(json.toString());
-                String prettyJsonString = gson.toJson(je);
-
-                //System.out.println(prettyJsonString);
-
-          JSONObject connector =
-                        (JSONObject) json.get("opendaylight-port-statistics:flow-capable-node-connector-statistics" +
-                                //".packets" +
-                                //".received" +
-                                "");
-
-            JSONObject packets = (JSONObject) connector.get("packets");
-
-            int value = packets.getInt(param);
-
-            connection.disconnect();
-
-            return value;
-        }
-        catch   (Exception ex)
-        {
-            ex.printStackTrace();
-        }
-
-        return -1;
-
-    }
-
-    private static int ODLRESTNodeLinkByteParamExtraction(int nodeNumber, int linkNumber, String param)
-    {
-            JSONObject resp = ODLRESTHelper.ODLPortStatisticsJSON(nodeNumber, linkNumber);
-            JSONObject json_bytes = (JSONObject) resp.get("bytes");
+            JSONObject json_bytes = (JSONObject) resp.get("packets");
             return json_bytes.getInt(param);
+        }
+        catch(Exception ex)
+        {
+            return 0;
+        }
     }
 
-    private static int ODLRESTNodeLinkParamExtraction(int nodeNumber, int linkNumber, String param)
+    public static int ODLRESTNodeLinkByteParamExtraction(JSONObject resp, String param)
     {
-        JSONObject resp = ODLRESTHelper.ODLPortStatisticsJSON(nodeNumber, linkNumber);
-        return resp.getInt(param);
+           try
+           {
+               JSONObject json_bytes = (JSONObject) resp.get("bytes");
+               return json_bytes.getInt(param);
+           }
+           catch(Exception ex)
+           {
+            return 0;
+           }
     }
 
-    private static int ODLRESTNodeLinkInstantaneousRateTXParamExtraction(int nodeNumber, int linkNumber, int prevTXBytes)
+    public static int ODLRESTNodeLinkParamExtraction(JSONObject resp, String param)
     {
-        int currTXBytes = ODLRESTNodeLinkByteParamExtraction(nodeNumber, linkNumber, "transmitted");
-
-        return (currTXBytes - prevTXBytes);
-
+        try
+        {
+            return resp.getInt(param);
+        } catch (Exception ex)
+        {
+            return 0;
+        }
     }
 
-    private static int ODLRESTNodeLinkInstantaneousRateTXRatioParamExtraction(int nodeNumber, int linkNumber, int prevTXBytes, int max_bit_bandwidth)
+    public static int ODLRESTNodeLinkInstantaneousRateTXParamExtraction(JSONObject resp, int prevTXBytes)
     {
-        int bytes_per_second = ODLRESTNodeLinkInstantaneousRateTXParamExtraction(nodeNumber, linkNumber, prevTXBytes);
-        int bits_per_second = bytes_per_second * 8;
+            int currTXBytes = ODLRESTNodeLinkByteParamExtraction(resp, "transmitted");
 
+            //This situation occurs if mininet restarted
+            if(currTXBytes < prevTXBytes) return 0;
+
+            return (currTXBytes - prevTXBytes);
+    }
+
+    public static int ODLRESTNodeLinkInstantaneousRateTXRatioParamExtraction(JSONObject resp, int prevTXBytes, int max_bit_bandwidth)
+    {
+        int bytes_per_period = ODLRESTNodeLinkInstantaneousRateTXParamExtraction(resp, prevTXBytes);
+        double seconds_per_period = ODLNodeInstrumetation.samplingPeriodMS / 1000;
+        double bytes_per_second = bytes_per_period / seconds_per_period;
+        double bits_per_second = bytes_per_second * 8;
+        int ratio = (int) (100 * bits_per_second / max_bit_bandwidth);
         //Return percentage between (0 and 100)
-        return 100 * (bits_per_second / max_bit_bandwidth);
+        return ratio;
     }
 
-    private static JSONObject ODLPortStatisticsJSON(int nodeNumber, int linkNumber)
+    public static JSONObject ODLPortStatisticsJSON(int nodeNumber, int linkNumber)
     {
         String nodeName = "openflow:" + nodeNumber;
         String nodeLink = nodeName + ":" + linkNumber;
@@ -138,8 +108,6 @@ public class ODLRESTHelper
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 
-            connection.disconnect();
-
             JSONObject json = new JSONObject(readAll(reader));
 
             //System.out.println(json.toString());
@@ -154,14 +122,15 @@ public class ODLRESTHelper
             JSONObject connector =
                     (JSONObject) json.get("opendaylight-port-statistics:flow-capable-node-connector-statistics");
 
+            connection.disconnect();
             return connector;
         }
         catch(Exception e)
         {
-
+                //e.printStackTrace();
+                return new JSONObject();
         }
 
-        return new JSONObject();
     }
 
 
@@ -173,57 +142,59 @@ public class ODLRESTHelper
         int prevTXBytes;
         int result = -1;
 
+        JSONObject resp = ODLNodeInstrumetation.jsonObjects[nodeNumber][linkNumber];
         switch (metric_name)
         {
             case "packets_received_total":
-                result =  ODLRESTHelper.ODLRESTNodeLinkPacketParamExtraction(nodeNumber, linkNumber, "received");
+                result =  ODLRESTHelper.ODLRESTNodeLinkPacketParamExtraction(resp, "received");
                 break;
 
             case "packets_sent_total":
-                result = ODLRESTHelper.ODLRESTNodeLinkPacketParamExtraction(nodeNumber, linkNumber, "transmitted");
+                result = ODLRESTHelper.ODLRESTNodeLinkPacketParamExtraction(resp, "transmitted");
                 break;
 
             case "collision_count":
-                result = ODLRESTHelper.ODLRESTNodeLinkParamExtraction(nodeNumber, linkNumber, "collision-count");
+                result = ODLRESTHelper.ODLRESTNodeLinkParamExtraction(resp, "collision-count");
                 break;
 
             case "bytes_received_total":
-                result = ODLRESTHelper.ODLRESTNodeLinkByteParamExtraction(nodeNumber, linkNumber, "received");
+                result = ODLRESTHelper.ODLRESTNodeLinkByteParamExtraction(resp, "received");
                 break;
 
             case "bytes_sent_total":
-                result = ODLRESTHelper.ODLRESTNodeLinkByteParamExtraction(nodeNumber, linkNumber, "transmitted");
+                result = ODLRESTHelper.ODLRESTNodeLinkByteParamExtraction(resp, "transmitted");
                 break;
 
             case "instantaneous_transmitted_rate":
                 prevTXBytes = ODLNodeInstrumetation.prevTXBytes[nodeNumber][linkNumber];
                 if(prevTXBytes == 0) return 0;
-                result = ODLRESTHelper.ODLRESTNodeLinkInstantaneousRateTXParamExtraction(nodeNumber, linkNumber,
+                result = ODLRESTHelper.ODLRESTNodeLinkInstantaneousRateTXParamExtraction(resp,
                         prevTXBytes);
                 break;
 
             case "instantaneous_transmitted_rate_ratio":
                 prevTXBytes = ODLNodeInstrumetation.prevTXBytes[nodeNumber][linkNumber];
                 if(prevTXBytes == 0) return 0;
-                result = ODLRESTHelper.ODLRESTNodeLinkInstantaneousRateTXRatioParamExtraction(nodeNumber, linkNumber,
+                result = ODLRESTHelper.ODLRESTNodeLinkInstantaneousRateTXRatioParamExtraction(resp,
                         prevTXBytes, ODLNodeInstrumetation.linkBW);
                 break;
         }
 
         //Update PrevTXBytes
-        ODLRESTHelper.updatePrevTXBytes();
+        //ODLRESTHelper.updatePrevTXBytes();
 
         return result;
     }
 
-    private static void updatePrevTXBytes()
+    public static void updatePrevTXBytes()
     {
         for(int node = 1; node <= 20; node++)
             for(int link = 1; link <= 4; link++)
             {
                 try {
+                    JSONObject resp = ODLNodeInstrumetation.jsonObjects[node][link];
                     ODLNodeInstrumetation.prevTXBytes[node][link] =
-                            ODLRESTHelper.ODLRESTNodeLinkByteParamExtraction(node, link, "transmitted");
+                            ODLRESTHelper.ODLRESTNodeLinkByteParamExtraction(resp, "transmitted");
                 }
                 catch(Exception e)
                 {

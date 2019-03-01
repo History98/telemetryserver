@@ -9,6 +9,7 @@ package com.odl.rest.test;
 
 import com.google.gson.*;
 import com.odl.rest.XmlFormatter;
+import com.telemetryserver.Instrumentation.ODLNodeInstrumetation;
 import com.telemetryserver.dao.ODLRESTHelper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -26,7 +27,7 @@ import java.net.URL;
 
 import org.json.JSONObject;
 
-public class ODLRestTest
+public class ODLRestHelperTest
 {
     @Test
     public void testODLRESTTopologyInterface()
@@ -86,7 +87,6 @@ public class ODLRestTest
 
 
     }
-
 
     @Test
     public void testODLRESTNodesInterface()
@@ -300,6 +300,51 @@ public class ODLRestTest
     }
 
     @Test
+    public void testODLRESTNodeLinkByteParamExtraction()
+    {
+        int nodeNumber = 1;
+        int linkNumber = 1;
+
+        JSONObject resp = ODLRESTHelper.ODLPortStatisticsJSON(nodeNumber, linkNumber);
+        int txBytes = ODLRESTHelper.ODLRESTNodeLinkByteParamExtraction(resp, "transmitted");
+        int rxBytes = ODLRESTHelper.ODLRESTNodeLinkByteParamExtraction(resp, "received");
+
+        Assert.assertNotEquals(txBytes, -1);
+        Assert.assertNotEquals(rxBytes, -1);
+
+    }
+
+    @Test
+    public void testODLRESTNodeLinkInstantaneousRateTXParamExtraction()
+    {
+        int nodeNumber = 1;
+        int linkNumber = 1;
+
+        int prevTXBytes = ODLNodeInstrumetation.prevTXBytes[nodeNumber][linkNumber];
+        JSONObject resp = ODLRESTHelper.ODLPortStatisticsJSON(nodeNumber, linkNumber);
+        int rate = ODLRESTHelper.ODLRESTNodeLinkInstantaneousRateTXParamExtraction(resp,  prevTXBytes);
+
+        Assert.assertNotEquals(rate, -1);
+    }
+
+    @Test
+    public void testODLRESTNodeLinkInstantaneousRateTXRatioParamExtraction()
+    {
+        int nodeNumber = 1;
+        int linkNumber = 1;
+
+        int samplingPeriodMS = 10000;
+        ODLNodeInstrumetation.samplingPeriodMS = samplingPeriodMS;
+
+        int prevTXBytes = ODLNodeInstrumetation.prevTXBytes[nodeNumber][linkNumber];
+        JSONObject resp = ODLRESTHelper.ODLPortStatisticsJSON(nodeNumber, linkNumber);
+        int ratio = ODLRESTHelper.ODLRESTNodeLinkInstantaneousRateTXRatioParamExtraction(resp,
+                prevTXBytes, ODLNodeInstrumetation.linkBW);
+
+        Assert.assertNotEquals(ratio, -1);
+    }
+
+    @Test
     public void ODLRESTHelper_getNodeNumberFromMetricName()
     {
         String test_String = "Node_23_Link_1_dummy_metric";
@@ -308,7 +353,6 @@ public class ODLRestTest
         Assert.assertEquals(extractedNode, 23);
 
     }
-
 
     @Test
     public void ODLRESTHelper_getLinkNumberFromLinkName()
@@ -329,8 +373,9 @@ public class ODLRestTest
         Assert.assertEquals(extractedMetric , "dummy_metric");
 
     }
-
-    private static String readAll(Reader rd) throws IOException {
+    
+    private static String readAll(Reader rd) throws IOException
+    {
         StringBuilder sb = new StringBuilder();
         int cp;
         while ((cp = rd.read()) != -1) {

@@ -9,6 +9,7 @@ package com.telemetryserver.Instrumentation;
 
 import com.telemetryserver.dao.ODLRESTHelper;
 import io.prometheus.client.Gauge;
+import org.json.JSONObject;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -21,8 +22,10 @@ import java.util.Map;
 
 public class ODLNodeInstrumetation extends HttpServlet
 {
-    public static int[][] prevTXBytes = new int[32][5]; //Updated every second!!!!
-    public static int linkBW = (int) 8e7; //This is 10MB;
+    public static int[][] prevTXBytes = new int[32][5]; //Updated every period!!!!
+    public static JSONObject[][] jsonObjects = new JSONObject[21][5];
+    public static int linkBW = (int) 8e6; //This is in Bits (i.e 8e6 = 1MB);
+    public static int samplingPeriodMS;
 
     private static ODLNodeInstrumetation _instance = new ODLNodeInstrumetation();
 
@@ -1188,31 +1191,13 @@ public class ODLNodeInstrumetation extends HttpServlet
 
     public static void updateODLPacketMetrics()
     {
-        System.out.println("Updating ODL Packet Metrics");
-
-        //Used for 19 switches
-        int N = 3; //get number of nodes
-        int linkNumber = 1;
-
-        int received = ODLRESTHelper.ODLRESTNodeLinkPacketParamExtraction(1, linkNumber, "received");
-        int sent = ODLRESTHelper.ODLRESTNodeLinkPacketParamExtraction(1, linkNumber, "transmitted");
-
-        Node_1_Link_1_packets_received_total.set(received);
-        Node_1_Link_1_packets_sent_total.set(sent);
-
-        received = ODLRESTHelper.ODLRESTNodeLinkPacketParamExtraction(2, linkNumber, "received");
-        sent = ODLRESTHelper.ODLRESTNodeLinkPacketParamExtraction(2, linkNumber, "transmitted");
-
-        Node_2_Link_1_packets_received_total.set(received);
-        Node_2_Link_1_packets_sent_total.set(sent);
-
-        received = ODLRESTHelper.ODLRESTNodeLinkPacketParamExtraction(3, linkNumber, "received");
-        sent = ODLRESTHelper.ODLRESTNodeLinkPacketParamExtraction(3, linkNumber, "transmitted");
-
-        Node_3_Link_1_packets_received_total.set(received);
-        Node_3_Link_1_packets_sent_total.set(sent);
+        //Deprecated
     }
 
+    public static void updatePrevTXBytes()
+    {
+        ODLRESTHelper.updatePrevTXBytes();
+    }
 
     public static void updateODLMetricsAll()
     {
@@ -2366,6 +2351,13 @@ public class ODLNodeInstrumetation extends HttpServlet
 
 //endregion
 
+    }
+
+    public static void updateLinkStateObjects()
+    {
+       for(int node = 1; node <= 20; node++)
+           for(int link = 1; link <=4; link++)
+               jsonObjects[node][link] = ODLRESTHelper.ODLPortStatisticsJSON(node, link);
     }
 
     public ODLNodeInstrumetation()
