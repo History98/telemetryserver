@@ -145,7 +145,6 @@ public class ODLRestHelperTest
 
     }
 
-
     @Test
     public void testODLRESTNodeLinkInterface()
     {
@@ -373,7 +372,7 @@ public class ODLRestHelperTest
         Assert.assertEquals(extractedMetric , "dummy_metric");
 
     }
-    
+
     private static String readAll(Reader rd) throws IOException
     {
         StringBuilder sb = new StringBuilder();
