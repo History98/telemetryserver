@@ -22,6 +22,9 @@ public class ODLParamPollScheduler extends TimerTask
 
         //Update prevTX
         ODLNodeInstrumetation.updatePrevTXBytes();
+        //Update Neccesary entities
+        ODLRESTHelper.updatePrevTXBytes();
+
     }
 
     @Override

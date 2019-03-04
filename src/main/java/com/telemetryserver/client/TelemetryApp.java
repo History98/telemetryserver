@@ -39,9 +39,14 @@ public class TelemetryApp
         int port = 2018;
 
         ODLNodeInstrumetation.get_instance();
+<<<<<<< HEAD
         ODLNodeInstrumetation.samplingPeriodMS = samplingPeriodMS;
         instrumentODLNodes(samplingPeriodMS);
         startTestServer(port);
+=======
+        instrumentODLNodes(10000);
+        startTestServer(2018);
+>>>>>>> 00709abc0fe484f7546564588e5277e8effe5daf
     }
 
 

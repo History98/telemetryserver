@@ -11,10 +11,7 @@ import com.telemetryserver.Instrumentation.ODLNodeInstrumetation;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -35,14 +32,14 @@ public class ODLRESTHelper
 
     public static int ODLRESTNodeLinkByteParamExtraction(JSONObject resp, String param)
     {
+
            try
            {
                JSONObject json_bytes = (JSONObject) resp.get("bytes");
                return json_bytes.getInt(param);
            }
-           catch(Exception ex)
-           {
-            return 0;
+           catch(Exception ex) {
+               return 0;
            }
     }
 
@@ -59,6 +56,7 @@ public class ODLRESTHelper
 
     public static int ODLRESTNodeLinkInstantaneousRateTXParamExtraction(JSONObject resp, int prevTXBytes)
     {
+
             int currTXBytes = ODLRESTNodeLinkByteParamExtraction(resp, "transmitted");
 
             //This situation occurs if mininet restarted
@@ -69,6 +67,7 @@ public class ODLRESTHelper
 
     public static int ODLRESTNodeLinkInstantaneousRateTXRatioParamExtraction(JSONObject resp, int prevTXBytes, int max_bit_bandwidth)
     {
+
         int bytes_per_period = ODLRESTNodeLinkInstantaneousRateTXParamExtraction(resp, prevTXBytes);
         double seconds_per_period = ODLNodeInstrumetation.samplingPeriodMS / 1000;
         double bytes_per_second = bytes_per_period / seconds_per_period;
@@ -110,6 +109,8 @@ public class ODLRESTHelper
 
             JSONObject json = new JSONObject(readAll(reader));
 
+            connection.disconnect();
+
             //System.out.println(json.toString());
 
             Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -122,13 +123,19 @@ public class ODLRESTHelper
             JSONObject connector =
                     (JSONObject) json.get("opendaylight-port-statistics:flow-capable-node-connector-statistics");
 
+
             connection.disconnect();
+
             return connector;
         }
         catch(Exception e)
         {
                 //e.printStackTrace();
                 return new JSONObject();
+        }
+        finally
+        {
+
         }
 
     }
@@ -140,7 +147,7 @@ public class ODLRESTHelper
         int linkNumber = getLinkNumberFromLinkName(metric_name);
         metric_name = getMetricType(metric_name);
         int prevTXBytes;
-        int result = -1;
+        int result = 0;
 
         JSONObject resp = ODLNodeInstrumetation.jsonObjects[nodeNumber][linkNumber];
         switch (metric_name)
@@ -170,6 +177,7 @@ public class ODLRESTHelper
                 if(prevTXBytes == 0) return 0;
                 result = ODLRESTHelper.ODLRESTNodeLinkInstantaneousRateTXParamExtraction(resp,
                         prevTXBytes);
+
                 break;
 
             case "instantaneous_transmitted_rate_ratio":
@@ -179,9 +187,6 @@ public class ODLRESTHelper
                         prevTXBytes, ODLNodeInstrumetation.linkBW);
                 break;
         }
-
-        //Update PrevTXBytes
-        //ODLRESTHelper.updatePrevTXBytes();
 
         return result;
     }
