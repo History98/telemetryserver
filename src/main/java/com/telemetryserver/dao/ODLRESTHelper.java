@@ -209,7 +209,6 @@ public class ODLRESTHelper
 
     }
 
-
     public static int getNodeNumberFromMetricName(String metric_name)
     {
         int startIndex = 5;
