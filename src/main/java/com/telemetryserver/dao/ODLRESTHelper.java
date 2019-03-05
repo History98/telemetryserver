@@ -229,7 +229,7 @@ public class ODLRESTHelper
         return metric_name.substring(startIndex);
     }
 
-    private static String readAll(Reader rd) throws IOException {
+    public static String readAll(Reader rd) throws IOException {
         StringBuilder sb = new StringBuilder();
         int cp;
         while ((cp = rd.read()) != -1) {

@@ -373,7 +373,7 @@ public class ODLRestHelperTest
 
     }
 
-    private static String readAll(Reader rd) throws IOException
+    public static String readAll(Reader rd) throws IOException
     {
         StringBuilder sb = new StringBuilder();
         int cp;
