@@ -194,7 +194,7 @@ public class ODLFlowHelper {
 
      */
 
-    public static int sendFlow(String flow, int nodeNumber) {
+    public static int sendFlow(String flow, int nodeNumber, int destNodeOfFlow) {
         try {
             String nodeName = "openflow:" + nodeNumber;
             String loginPassword = "admin" + ":" + "admin";
@@ -204,7 +204,7 @@ public class ODLFlowHelper {
 
             String urlString = "http://localhost:8181/restconf/config/opendaylight-inventory:nodes/node/" +
                     nodeName +
-                    "/table/0/flow/1";
+                    "/table/0/flow/" + destNodeOfFlow;
 
 
             URL url = new URL(urlString);
@@ -227,7 +227,8 @@ public class ODLFlowHelper {
             return httpCon.getResponseCode();
 
         } catch (Exception ex) {
-            ex.printStackTrace();
+            //ex.printStackTrace();
+            System.out.println(flow);
             return -1;
         }
 

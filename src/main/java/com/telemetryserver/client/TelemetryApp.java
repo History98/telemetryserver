@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import static com.telemetryserver.Instrumentation.ODLNodeInstrumetation.pollTimer;
+
 public class TelemetryApp
 {
 
@@ -39,6 +41,7 @@ public class TelemetryApp
         int port = 2018;
 
         ODLNodeInstrumetation.get_instance();
+        ODLNodeInstrumetation.generateLinkTable();
         ODLNodeInstrumetation.samplingPeriodMS = samplingPeriodMS;
         instrumentODLNodes(samplingPeriodMS);
         startTestServer(port);
@@ -77,8 +80,7 @@ public class TelemetryApp
 
     private static void instrumentODLNodes(long period)
     {
-        Timer pollTimer = new Timer();
-        pollTimer.scheduleAtFixedRate(new ODLParamPollScheduler(), 0, period);
+        ODLNodeInstrumetation.pollTimer.scheduleAtFixedRate(new ODLParamPollScheduler(), 0, period);
 
 
         System.out.print("Started ODL instrumentation");

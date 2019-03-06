@@ -141,11 +141,11 @@ public class ODLRESTHelper
     }
 
 
-    public static int getMetricValueByName(String metric_name)
+    public static int getMetricValueByName(String input_metric_name)
     {
-        int nodeNumber = getNodeNumberFromMetricName(metric_name);
-        int linkNumber = getLinkNumberFromLinkName(metric_name);
-        metric_name = getMetricType(metric_name);
+        int nodeNumber = getNodeNumberFromMetricName(input_metric_name);
+        int linkNumber = getLinkNumberFromLinkName(input_metric_name);
+        String metric_name = getMetricType(input_metric_name);
         int prevTXBytes;
         int result = 0;
 
@@ -177,6 +177,21 @@ public class ODLRESTHelper
                 if(prevTXBytes == 0) return 0;
                 result = ODLRESTHelper.ODLRESTNodeLinkInstantaneousRateTXParamExtraction(resp,
                         prevTXBytes);
+
+                //This should only be run once (for one node : 2) - (path computation)
+                if(!ODLNodeInstrumetation.pathsComputed && nodeNumber == 10)
+                {
+                    double bytes = (double) result / (ODLNodeInstrumetation.samplingPeriodMS / 1000);
+                    double d_alpha = ((bytes * 8) / ODLNodeInstrumetation.linkBW);
+                    ODLNodeInstrumetation.alpha += d_alpha;
+                    System.out.println("d_alpha " + d_alpha);
+                    ODLNodeInstrumetation.alphaComputed = true;
+                }
+
+                if(!ODLNodeInstrumetation.pathsComputed && nodeNumber == 11)
+                {
+                    ODLNodeInstrumetation.pathsComputed = true;
+                }
 
                 break;
 

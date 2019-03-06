@@ -22,8 +22,15 @@ public class ODLParamPollScheduler extends TimerTask
 
         //Update prevTX
         ODLNodeInstrumetation.updatePrevTXBytes();
+
         //Update Neccesary entities
         ODLRESTHelper.updatePrevTXBytes();
+
+        //Path Computation
+        ODLNodeInstrumetation.computeShortestPathMatrix();
+
+        //Send Flows To OvS switches if neccesary
+        ODLNodeInstrumetation.sendAllODLFlows();
 
     }
 

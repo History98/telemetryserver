@@ -7,6 +7,10 @@
 
 package com.telemetryserver.Instrumentation;
 
+import SDNRouting.Class1;
+import com.mathworks.toolbox.javabuilder.MWNumericArray;
+import com.telemetryserver.dao.ODLFlowHelper;
+import com.telemetryserver.dao.ODLParamPollScheduler;
 import com.telemetryserver.dao.ODLRESTHelper;
 import io.prometheus.client.Gauge;
 import org.json.JSONObject;
@@ -16,16 +20,24 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class ODLNodeInstrumetation extends HttpServlet
 {
     public static int[][] prevTXBytes = new int[32][5]; //Updated every period!!!!
     public static JSONObject[][] jsonObjects = new JSONObject[21][5];
-    public static int linkBW = (int) 8e6; //This is in Bits (i.e 8e6 = 1MB);
+    public static int linkBW = (int) 8000000; //This is in Bits (1MB);
     public static int samplingPeriodMS;
+
+    public static double alpha = 0;
+    public static boolean alphaComputed = false;
+    public static boolean pathsComputed = false;
+    public static boolean flowSent = false;
+    public static boolean pathsSent = false;
+    public static MWNumericArray shortestPathMatrix = null;
+    public static int[][] linkTerminationTable = new int[20][20]; //linkTermination
+
+    public static Timer pollTimer = new Timer();
 
     private static ODLNodeInstrumetation _instance = new ODLNodeInstrumetation();
 
@@ -2353,6 +2365,200 @@ public class ODLNodeInstrumetation extends HttpServlet
 
     }
 
+    public static void computeShortestPathMatrix()
+    {
+        if(!pathsComputed || !alphaComputed) return;
+
+        System.out.println("Alpha for node 10 is: " + ODLNodeInstrumetation.alpha);
+
+        ODLNodeInstrumetation.pollTimer.cancel();
+
+        computeShortestPathMatrix(ODLNodeInstrumetation.alpha);
+
+    }
+
+    private static void computeShortestPathMatrix(double rate)
+    {
+        try
+        {
+            SDNRouting.Class1 sdncls = new Class1();
+
+            List input = new ArrayList(1);
+            List result = new ArrayList(20 * 20 * 20);
+
+            input.add(0.1);
+            result.add(0);
+
+
+            sdncls.getRoutingTable(result, input);
+
+            ODLNodeInstrumetation.shortestPathMatrix = (MWNumericArray) result.get(0);
+
+            sdncls.dispose();
+        }
+        catch(Exception ex)
+        {
+            ex.printStackTrace();
+        }
+    }
+
+    public static int computeNodeInShortestPath(int src, int dest)
+    {
+        try
+        {
+            SDNRouting.Class1 sdncls = new Class1();
+
+            List pathInput = new ArrayList();
+            pathInput.add(src);
+            pathInput.add(dest);
+            pathInput.add(ODLNodeInstrumetation.shortestPathMatrix);
+
+            List pathResult = new ArrayList();
+            pathResult.add(0);
+
+            sdncls.getPath(pathResult, pathInput);
+            MWNumericArray r = (MWNumericArray) pathResult.get(0);
+            int nexthop = (int)(double) r.get(2);
+
+            sdncls.dispose();
+
+            return nexthop;
+
+        }
+        catch(Exception e)
+        {
+            e.printStackTrace();
+            return 1;
+        }
+    }
+
+    public static void sendAllODLFlows()
+    {
+        if(!ODLNodeInstrumetation.alphaComputed || !ODLNodeInstrumetation.pathsComputed) return;
+
+        if(ODLNodeInstrumetation.flowSent) return;
+
+        int nxtNode;
+        for(int src = 1; src < 20; src++)
+            for(int dest = 1; dest < 20; dest++)
+            {
+                if(src != dest){
+
+                //Compute next node
+                nxtNode = computeNodeInShortestPath(src, dest);
+
+                //Send Flow
+                String flowName = "Flow_" + src + "_" + dest;
+                int terminationPort = ODLNodeInstrumetation.linkTerminationTable[src][dest];
+                int priority = 10;
+
+                if(terminationPort != 0)
+                {
+                    //Configure the xmlFlow
+                    String xmlFlow = ODLFlowHelper.configureFromXMLFlow(flowName, ((Integer) dest).toString(), priority, terminationPort, dest);
+
+                    //Send the flow to SRC node
+                    ODLFlowHelper.sendFlow(xmlFlow, src, dest);
+                }
+            }
+            }
+
+        ODLNodeInstrumetation.pollTimer.scheduleAtFixedRate(
+                new ODLParamPollScheduler(), 0, ODLNodeInstrumetation.samplingPeriodMS);
+            ODLNodeInstrumetation.flowSent = true;
+
+        System.out.print("Flows Sent!");
+
+    }
+
+
+    private static int TerminationPoint(int src, int dest)
+    {
+        return linkTerminationTable[src][dest];
+    }
+
+    public static void generateLinkTable()
+    {
+        //Node 1
+        linkTerminationTable[1][4] = 2;
+
+        //Node 2
+        linkTerminationTable[2][13] = 2;
+        linkTerminationTable[2][18] = 3;
+
+        //Node 3
+        linkTerminationTable[3][6] = 2;
+
+        //Node 4
+        linkTerminationTable[4][1] = 2;
+        linkTerminationTable[4][5] = 3;
+        linkTerminationTable[4][7] = 4;
+
+        //Node 5
+        linkTerminationTable[5][10] = 3;
+
+        //Node 6
+        linkTerminationTable[6][3] = 2;
+        linkTerminationTable[6][7] = 3;
+        linkTerminationTable[6][11] = 4;
+
+        //Node 7
+        linkTerminationTable[7][4] = 2;
+        linkTerminationTable[7][6] = 3;
+        linkTerminationTable[7][8] = 4;
+
+        //Node 8
+        linkTerminationTable[8][7] = 2;
+        linkTerminationTable[8][9] = 3;
+        linkTerminationTable[8][12] = 4;
+
+        //Node 9
+        linkTerminationTable[9][8] = 2;
+        linkTerminationTable[9][16] = 3;
+        linkTerminationTable[9][18] = 4;
+
+        //Node 10
+        linkTerminationTable[10][5] = 2;
+
+        //Node 11
+        linkTerminationTable[11][6] = 2;
+        linkTerminationTable[11][12] = 3;
+        linkTerminationTable[11][13] = 4;
+
+        //Node 12
+        linkTerminationTable[12][8] = 2;
+        linkTerminationTable[12][12] = 3;
+
+        //Node 13
+        linkTerminationTable[13][2] = 2;
+        linkTerminationTable[13][11] = 3;
+
+        //Node 14
+        linkTerminationTable[14][15] = 2;
+        linkTerminationTable[14][16] = 3;
+
+        //Node 15
+        linkTerminationTable[15][14] = 2;
+        linkTerminationTable[15][17] = 3;
+
+        //Node 16
+        linkTerminationTable[16][9] = 2;
+        linkTerminationTable[16][14] = 3;
+        linkTerminationTable[16][19] = 4;
+
+        //Node 17
+        linkTerminationTable[17][15] = 2;
+        linkTerminationTable[17][18] = 3;
+
+        //Node 18
+        linkTerminationTable[18][2] = 2;
+        linkTerminationTable[18][9] = 3;
+        linkTerminationTable[18][17] = 4;
+
+        //Node 19
+        linkTerminationTable[19][16] = 2;
+    }
+
     public static void updateLinkStateObjects()
     {
        for(int node = 1; node <= 20; node++)
@@ -2364,6 +2570,9 @@ public class ODLNodeInstrumetation extends HttpServlet
     {
 
     }
+
+
+
 
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)

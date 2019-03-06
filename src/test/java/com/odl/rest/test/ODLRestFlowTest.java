@@ -115,7 +115,7 @@ public class ODLRestFlowTest
 
         System.out.println(result);
 
-        int responseCode = ODLFlowHelper.sendFlow(result, 1);
+        int responseCode = ODLFlowHelper.sendFlow(result, 1, 1);
 
         Assert.assertEquals(200, responseCode);
     }
