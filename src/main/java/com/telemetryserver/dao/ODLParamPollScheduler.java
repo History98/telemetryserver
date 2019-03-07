@@ -26,11 +26,19 @@ public class ODLParamPollScheduler extends TimerTask
         //Update Neccesary entities
         ODLRESTHelper.updatePrevTXBytes();
 
-        //Path Computation
-        ODLNodeInstrumetation.computeShortestPathMatrix();
+        try
+        {
+            //Path Computation
+            ODLNodeInstrumetation.computeShortestPathMatrix();
 
-        //Send Flows To OvS switches if neccesary
-        ODLNodeInstrumetation.sendAllODLFlows();
+            //Send Flows To OvS switches if neccesary
+            ODLNodeInstrumetation.sendAllODLFlows();
+        }
+        catch(Exception ex)
+        {
+            System.out.print("Matlab Runtime probably not available!");
+            ex.printStackTrace();
+        }
 
     }
 
